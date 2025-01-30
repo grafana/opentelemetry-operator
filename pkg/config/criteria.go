@@ -29,7 +29,7 @@ var allowedAttributeNames = map[string]struct{}{
 	AttrOwnerName:       {},
 }
 
-// DiscoveryConfig for the discover.ProcessFinder pipeline
+// DiscoveryConfig is the configuration.
 type DiscoveryConfig struct {
 	// Services selection.
 	Services DefinitionCriteria `yaml:"services"`
