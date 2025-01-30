@@ -30,25 +30,6 @@ services:
 	assert.False(t, attr.MatchString("abca"))
 }
 
-func TestYAMLParse_PathRegexp_Errors(t *testing.T) {
-	t.Run("wrong regular expression", func(t *testing.T) {
-		require.Error(t, yaml.Unmarshal([]byte(`services:
-  - exe_path: "$a\("`), &yamlFile{}))
-	})
-	t.Run("wrong regular pathregexp type", func(t *testing.T) {
-		require.Error(t, yaml.Unmarshal([]byte(`services:
-  - exe_path:
-      other: kind`), &yamlFile{}))
-	})
-	t.Run("unknown attribute name", func(t *testing.T) {
-		require.Error(t, yaml.Unmarshal([]byte(`services:
-  - name: foo
-    exe_path: "^abc$"
-	chaca_chaca: foolss
-`), &yamlFile{}))
-	})
-}
-
 func TestYAMLParse_OtherAttrs(t *testing.T) {
 	inputFile := `
 services:

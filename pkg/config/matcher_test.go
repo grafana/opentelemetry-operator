@@ -56,8 +56,6 @@ func TestCriteriaMatcher_MustMatchAllAttributes(t *testing.T) {
  services:
  - name: all-attributes-must-match
    namespace: foons
-   open_ports: 80,8080-8089
-   exe_path: foo
    k8s_namespace: thens
    k8s_pod_name: thepod
    k8s_deployment_name: thedepl
@@ -104,6 +102,8 @@ func TestCriteriaMatcher_MustMatchAllAttributes(t *testing.T) {
 			attrs := processAttrs{
 				metadata: test.attributes,
 			}
+			err := config.Validate()
+			require.NoError(t, err)
 			require.Equal(t, test.want, matchByAttributes(&attrs, &config.Discovery.Services[0]))
 		})
 	}
