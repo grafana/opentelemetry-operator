@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	config2 "github.com/open-telemetry/opentelemetry-operator/pkg/config"
 	"os"
 	"regexp"
 	"runtime"
@@ -513,6 +514,8 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	config2.Start(ctx)
 
 	setupLog.Info("starting manager")
 	// NOTE: We enable LeaderElectionReleaseOnCancel, and to be safe we need to exit right after the manager does
