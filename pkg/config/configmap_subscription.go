@@ -5,10 +5,12 @@ package config
 
 import (
 	"context"
+	"github.com/go-logr/logr"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 
 	"github.com/go-kit/log"
@@ -71,7 +73,7 @@ func newConfigMapSubscriptionMetrics() *configMapSubscriptionMetrics {
 
 type ConfigMapSubscription struct {
 	Ctx             context.Context
-	Logger          log.Logger
+	Logger          logr.Logger
 	ClientSet       kubernetes.Interface
 	Namespace       string
 	RefreshInterval time.Duration
@@ -83,15 +85,17 @@ type ConfigMapSubscription struct {
 func (c *ConfigMapSubscription) Reconcile(object runtime.Object, event watch.EventType) {
 	configMap := object.(*v1.ConfigMap)
 
-	rootSpan := opentracing.GlobalTracer().StartSpan("configMapSubscriptionReoncile")
+	rootSpan := opentracing.GlobalTracer().StartSpan("configMapSubscriptionReconcile")
 	rootSpan.SetTag("configMap name", configMap.Name)
 	rootSpan.SetTag("configMap namespace", configMap.Namespace)
 	defer rootSpan.Finish()
 
-	level.Info(c.Logger).Log("ConfigMap subscription event", event, "ConfigMap name", configMap.Name)
+	c.Logger.Info("ConfigMap subscription event", event, "ConfigMap name", configMap.Name)
 	annotations := configMap.GetAnnotations()
 	dataSrc, srcExists := annotations[configMapOperatorSrc]
 	key, keyExists := annotations[configMapOperatorKey]
+
+	c.Logger.Info("ConfigMap subscription event", event, "ConfigMap name", configMap.Name)
 
 	switch event {
 	case watch.Added:
@@ -102,18 +106,15 @@ func (c *ConfigMapSubscription) Reconcile(object runtime.Object, event watch.Eve
 		watchEventAddSpan.SetTag("configMap namespace", configMap.Namespace)
 		defer watchEventAddSpan.Finish()
 
-		// Check if ConfigMap has required annotations.
 		if srcExists && keyExists {
 			c.metrics.configMapGauge.WithLabelValues(configMap.Name, configMap.Namespace).Inc()
 
-			// Update ConfigMaps in goroutines to support multiple ConfigMaps with annotations. End goroutine based on ctx.
-			// TODO(saswatamcode): Improve error handling.
 			go func() {
 				ticker := time.NewTicker(c.RefreshInterval)
 				for {
 					select {
 					case <-ticker.C:
-						level.Info(c.Logger).Log("updating ConfigMap", configMap.Name)
+						c.Logger.Info("updating ConfigMap", configMap.Name)
 						updatedConfigMap := configMap.DeepCopy()
 						if len(updatedConfigMap.Data) == 0 {
 							updatedConfigMap.Data = make(map[string]string)
@@ -124,7 +125,7 @@ func (c *ConfigMapSubscription) Reconcile(object runtime.Object, event watch.Eve
 						var err error
 						configMap, err = c.ClientSet.CoreV1().ConfigMaps(configMap.Namespace).Update(c.Ctx, updatedConfigMap, metav1.UpdateOptions{})
 						if err != nil {
-							level.Error(c.Logger).Log("error updating ConfigMap", err)
+							c.Logger.Error("error updating ConfigMap", err)
 						}
 					case <-c.Ctx.Done():
 						return
@@ -148,7 +149,9 @@ func (c *ConfigMapSubscription) Reconcile(object runtime.Object, event watch.Eve
 
 func (c *ConfigMapSubscription) Subscribe() (watch.Interface, error) {
 	var err error
-	c.watcherInterface, err = c.ClientSet.CoreV1().ConfigMaps(c.Namespace).Watch(c.Ctx, metav1.ListOptions{})
+	c.watcherInterface, err = c.ClientSet.CoreV1().ConfigMaps(c.Namespace).Watch(c.Ctx, metav1.ListOptions{
+		FieldSelector: "metadata.name=auto-instrumentation",
+	})
 	if err != nil {
 		return nil, err
 	}
