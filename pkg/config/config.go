@@ -2,8 +2,6 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
-	v1 "k8s.io/api/core/v1"
 )
 
 const (
@@ -23,11 +21,4 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
-}
-
-func loadConfig(configMap *v1.ConfigMap) error {
-	s := configMap.Data[configMapKey]
-	config := Config{}
-	err := yaml.Unmarshal([]byte(s), &config)
-	return err
 }

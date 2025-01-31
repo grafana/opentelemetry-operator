@@ -9,7 +9,7 @@ import (
 )
 
 func Start(ctx context.Context, logger logr.Logger, clientSet *kubernetes.Clientset) error {
-	subscription := ConfigMapSubscription{
+	subscription := ConfigMapLoader{
 		Ctx:       ctx,
 		Logger:    logger,
 		ClientSet: clientSet,

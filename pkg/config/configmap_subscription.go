@@ -10,6 +10,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -58,7 +59,8 @@ func newConfigMapSubscriptionMetrics() *configMapSubscriptionMetrics {
 	return c
 }
 
-type ConfigMapSubscription struct {
+type ConfigMapLoader struct {
+	Config    Config
 	Ctx       context.Context
 	Logger    logr.Logger
 	ClientSet kubernetes.Interface
@@ -68,7 +70,7 @@ type ConfigMapSubscription struct {
 	metrics          *configMapSubscriptionMetrics
 }
 
-func (c *ConfigMapSubscription) Reconcile(object runtime.Object, event watch.EventType) {
+func (c *ConfigMapLoader) Reconcile(object runtime.Object, event watch.EventType) {
 	configMap := object.(*v1.ConfigMap)
 
 	rootSpan := opentracing.GlobalTracer().StartSpan("configMapSubscriptionReconcile")
@@ -87,7 +89,7 @@ func (c *ConfigMapSubscription) Reconcile(object runtime.Object, event watch.Eve
 		watchEventAddSpan.SetTag("configMap namespace", configMap.Namespace)
 		defer watchEventAddSpan.Finish()
 
-		err := loadConfig(configMap)
+		err := c.loadConfig(configMap)
 		if err != nil {
 			c.Logger.Error(err, "error loading config")
 			return
@@ -95,7 +97,7 @@ func (c *ConfigMapSubscription) Reconcile(object runtime.Object, event watch.Eve
 	}
 }
 
-func (c *ConfigMapSubscription) Subscribe() (watch.Interface, error) {
+func (c *ConfigMapLoader) Subscribe() (watch.Interface, error) {
 	var err error
 	c.watcherInterface, err = c.ClientSet.CoreV1().ConfigMaps(c.Namespace).Watch(c.Ctx, metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("metadata.name=%s", configMapName),
@@ -107,4 +109,34 @@ func (c *ConfigMapSubscription) Subscribe() (watch.Interface, error) {
 	c.metrics = newConfigMapSubscriptionMetrics()
 
 	return c.watcherInterface, nil
+}
+
+func (c *ConfigMapLoader) loadConfig(configMap *v1.ConfigMap) error {
+	s := configMap.Data[configMapKey]
+	newConfig := Config{}
+	err := yaml.Unmarshal([]byte(s), &newConfig)
+	if err != nil {
+		return fmt.Errorf("error unmarshaling YAML: %w", err)
+	}
+	c.Logger.Info("loaded config")
+	err = newConfig.Validate()
+	if err != nil {
+		return fmt.Errorf("error validating config: %w", err)
+	}
+
+	oldConfig := c.Config
+	diff(oldConfig, newConfig)
+
+	// get all pods that match the new added/removed services
+	// restart those pods
+	// when they are restarted, they will pick up the new config from the admission controller
+
+	//matchByAttributes(&attrs, &newConfig.Discovery.Services[0])
+
+	return err
+}
+
+func diff(oldConfig Config, newConfig Config) {
+	// added config parts: add instrumentation
+	// removed config parts: remove instrumentation
 }
