@@ -516,7 +516,11 @@ func main() {
 	}
 
 	setupLog.Info("Starting config map sync")
-	config2.Start(ctx, ctrl.Log.WithName("configmap-sync"), mgr.GetClient(), cfg, clientset)
+	err = config2.Start(ctx, ctrl.Log.WithName("configmap-sync"), clientset)
+	if err != nil {
+		setupLog.Error(err, "failed to start config map sync")
+		os.Exit(1)
+	}
 
 	setupLog.Info("starting manager")
 	// NOTE: We enable LeaderElectionReleaseOnCancel, and to be safe we need to exit right after the manager does
