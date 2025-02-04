@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/opentracing/opentracing-go"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,47 +15,19 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
 	"slices"
+	"sync"
 )
 
-type configMapSubscriptionMetrics struct {
-	configMapGauge                 *prometheus.GaugeVec
-	configMapHTTPRequestsPerformed *prometheus.CounterVec
-	configMapHTTPRequestsLatency   *prometheus.HistogramVec
-	configMapFileReadsPerformed    *prometheus.CounterVec
-	configMapFileReadsLatency      *prometheus.HistogramVec
-}
+const (
+	configMapKey       = "config.yaml"
+	configMapNamespace = "default"
+	configMapName      = "auto-instrumentation-config"
+)
 
-func newConfigMapSubscriptionMetrics() *configMapSubscriptionMetrics {
-	c := &configMapSubscriptionMetrics{}
-
-	c.configMapHTTPRequestsPerformed = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "configmap_operator_http_requests_total",
-		Help: "The total number of HTTP GET requests for fetching ConfigMap source data.",
-	}, []string{"domain"})
-
-	c.configMapHTTPRequestsLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "configmap_operator_per_http_request_latency",
-		Help:    "Latency for HTTP GET requests.",
-		Buckets: prometheus.DefBuckets,
-	}, []string{"domain"})
-
-	c.configMapFileReadsPerformed = promauto.NewCounterVec(prometheus.CounterOpts{
-		Name: "configmap_operator_file_read_total",
-		Help: "The total number of file reads for fetching ConfigMap source data.",
-	}, []string{"filepath"})
-
-	c.configMapFileReadsLatency = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Name:    "configmap_operator_per_file_read_latency",
-		Help:    "Latency for file reads.",
-		Buckets: prometheus.DefBuckets,
-	}, []string{"filepath"})
-
-	c.configMapGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "configmap_operator_current_configmaps",
-		Help: "The total number of ConfigMaps that are being updated at a time.",
-	}, []string{"name", "namespace"})
-
-	return c
+type DynamicConfig interface {
+	Subscribe() (watch.Interface, error)
+	Reconcile(object runtime.Object, event watch.EventType)
+	IsPodEnabled(pod v1.Pod) bool
 }
 
 type ConfigMapLoader struct {
@@ -68,7 +38,39 @@ type ConfigMapLoader struct {
 	Namespace string
 
 	watcherInterface watch.Interface
-	metrics          *configMapSubscriptionMetrics
+}
+
+func Start(ctx context.Context, logger logr.Logger, clientSet *kubernetes.Clientset) (DynamicConfig, error) {
+	loader := ConfigMapLoader{
+		Ctx:       ctx,
+		Logger:    logger,
+		ClientSet: clientSet,
+		Namespace: configMapNamespace,
+	}
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+
+	watchInterface, err := loader.Subscribe()
+	if err != nil {
+		return nil, err
+	}
+	go func() {
+		for {
+			select {
+			case e, ok := <-watchInterface.ResultChan():
+				if ok && e.Type != watch.Error {
+					loader.Reconcile(e.Object, e.Type)
+				}
+			case <-ctx.Done():
+				wg.Done()
+				return
+			}
+		}
+	}()
+
+	wg.Wait()
+	return &loader, nil
 }
 
 func (c *ConfigMapLoader) Reconcile(object runtime.Object, event watch.EventType) {
@@ -107,8 +109,6 @@ func (c *ConfigMapLoader) Subscribe() (watch.Interface, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	c.metrics = newConfigMapSubscriptionMetrics()
 
 	return c.watcherInterface, nil
 }
