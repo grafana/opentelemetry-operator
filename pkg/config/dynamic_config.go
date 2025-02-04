@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
-	"github.com/opentracing/opentracing-go"
 	"gopkg.in/yaml.v3"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -75,23 +74,10 @@ func Start(ctx context.Context, logger logr.Logger, clientSet *kubernetes.Client
 
 func (c *ConfigMapLoader) Reconcile(object runtime.Object, event watch.EventType) {
 	configMap := object.(*v1.ConfigMap)
-
-	rootSpan := opentracing.GlobalTracer().StartSpan("configMapSubscriptionReconcile")
-	rootSpan.SetTag("configMap name", configMap.Name)
-	rootSpan.SetTag("configMap namespace", configMap.Namespace)
-	defer rootSpan.Finish()
-
 	c.Logger.Info("ConfigMap subscription event", event, "ConfigMap name", configMap.Name)
 
 	switch event {
 	case watch.Modified:
-		watchEventAddSpan := opentracing.GlobalTracer().StartSpan(
-			"watchEventAdd", opentracing.ChildOf(rootSpan.Context()),
-		)
-		watchEventAddSpan.SetTag("configMap name", configMap.Name)
-		watchEventAddSpan.SetTag("configMap namespace", configMap.Namespace)
-		defer watchEventAddSpan.Finish()
-
 		err := c.loadConfig(configMap)
 		if err != nil {
 			c.Logger.Error(err, "error loading config")
@@ -101,7 +87,6 @@ func (c *ConfigMapLoader) Reconcile(object runtime.Object, event watch.EventType
 }
 
 func (c *ConfigMapLoader) Subscribe() (watch.Interface, error) {
-
 	var err error
 	c.watcherInterface, err = c.ClientSet.CoreV1().ConfigMaps(c.Namespace).Watch(c.Ctx, metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("metadata.name=%s", configMapName),
@@ -182,6 +167,7 @@ func diff(oldConfig Config, newConfig Config) (DefinitionCriteria, DefinitionCri
 func equals(a, b Attributes) bool {
 	return a.Name == b.Name && a.Namespace == b.Namespace && regexMapEquals(a.Metadata, b.Metadata) && regexMapEquals(a.PodLabels, b.PodLabels)
 }
+
 func regexMapEquals(a, b map[string]*RegexpAttr) bool {
 	if len(a) != len(b) {
 		return false
