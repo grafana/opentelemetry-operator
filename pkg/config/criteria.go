@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"regexp"
+	"slices"
 )
 
 const (
@@ -13,6 +14,8 @@ const (
 	AttrReplicaSetName  = "k8s_replicaset_name"
 	AttrDaemonSetName   = "k8s_daemonset_name"
 	AttrStatefulSetName = "k8s_statefulset_name"
+	AttrCronJobName     = "k8s_cronjob_name"
+	AttrJobName         = "k8s_job_name"
 	// AttrOwnerName would be a generic search criteria that would
 	// match against deployment, replicaset, daemonset and statefulset names
 	AttrOwnerName = "k8s_owner_name"
@@ -26,7 +29,22 @@ var allowedAttributeNames = map[string]struct{}{
 	AttrReplicaSetName:  {},
 	AttrDaemonSetName:   {},
 	AttrStatefulSetName: {},
+	AttrCronJobName:     {},
+	AttrJobName:         {},
 	AttrOwnerName:       {},
+}
+
+type Config struct {
+	// Discovery configuration
+	Discovery DiscoveryConfig `yaml:"discovery"`
+}
+
+func (c *Config) Validate() error {
+	if err := c.Discovery.Services.Validate(); err != nil {
+		return fmt.Errorf("error in services YAML property: %w", err)
+	}
+
+	return nil
 }
 
 // DiscoveryConfig is the configuration.
@@ -61,11 +79,6 @@ func (dc DefinitionCriteria) Validate() error {
 // a given executable. If both OpenPorts and Path are defined, the inspected executable must fulfill both
 // properties.
 type Attributes struct {
-	// Name will define a name for the matching service. If unset, it will take the name of the executable process
-	Name string `yaml:"name"`
-	// Namespace will define a namespace for the matching service. If unset, it will be left empty.
-	Namespace string `yaml:"namespace"`
-
 	// Metadata stores other attributes, such as Kubernetes object metadata
 	Metadata map[string]*RegexpAttr `yaml:",inline"`
 
@@ -121,4 +134,47 @@ func (p *RegexpAttr) MatchString(input string) bool {
 		return true
 	}
 	return p.re.MatchString(input)
+}
+
+func diff(oldConfig Config, newConfig Config) (DefinitionCriteria, DefinitionCriteria) {
+	var remove DefinitionCriteria
+	for _, old := range oldConfig.Discovery.Services {
+		if !slices.ContainsFunc(newConfig.Discovery.Services, func(attributes Attributes) bool {
+			return equals(attributes, old)
+		}) {
+			remove = append(remove, old)
+		}
+	}
+	var add DefinitionCriteria
+	for _, n := range newConfig.Discovery.Services {
+		if !slices.ContainsFunc(oldConfig.Discovery.Services, func(attributes Attributes) bool {
+			return equals(attributes, n)
+		}) {
+			add = append(add, n)
+		}
+	}
+
+	// added config parts: add instrumentation
+	// removed config parts: remove instrumentation
+	return remove, add
+}
+
+func equals(a, b Attributes) bool {
+	return regexMapEquals(a.Metadata, b.Metadata) && regexMapEquals(a.PodLabels, b.PodLabels)
+}
+
+func regexMapEquals(a, b map[string]*RegexpAttr) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		v2, ok := b[k]
+		if !ok {
+			return false
+		}
+		if v.re.String() != v2.re.String() {
+			return false
+		}
+	}
+	return true
 }

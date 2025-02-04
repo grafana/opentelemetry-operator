@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	configmap "github.com/open-telemetry/opentelemetry-operator/pkg/config"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -39,11 +40,12 @@ var (
 )
 
 type instPodMutator struct {
-	Client      client.Client
-	sdkInjector *sdkInjector
-	Logger      logr.Logger
-	Recorder    record.EventRecorder
-	config      config.Config
+	Client        client.Client
+	sdkInjector   *sdkInjector
+	Logger        logr.Logger
+	Recorder      record.EventRecorder
+	config        config.Config
+	dynamicConfig configmap.DynamicConfig
 }
 
 type instrumentationWithContainers struct {
@@ -256,7 +258,7 @@ func (langInsts *languageInstrumentations) setLanguageSpecificContainers(ns meta
 
 var _ podmutation.PodMutator = (*instPodMutator)(nil)
 
-func NewMutator(logger logr.Logger, client client.Client, recorder record.EventRecorder, cfg config.Config) *instPodMutator {
+func NewMutator(logger logr.Logger, client client.Client, recorder record.EventRecorder, cfg config.Config, dynamicConfig configmap.DynamicConfig) *instPodMutator {
 	return &instPodMutator{
 		Logger: logger,
 		Client: client,
@@ -264,8 +266,9 @@ func NewMutator(logger logr.Logger, client client.Client, recorder record.EventR
 			logger: logger,
 			client: client,
 		},
-		Recorder: recorder,
-		config:   cfg,
+		Recorder:      recorder,
+		config:        cfg,
+		dynamicConfig: dynamicConfig,
 	}
 }
 
@@ -427,6 +430,9 @@ func (pm *instPodMutator) Mutate(ctx context.Context, ns corev1.Namespace, pod c
 
 func (pm *instPodMutator) getInstrumentationInstance(ctx context.Context, ns corev1.Namespace, pod corev1.Pod, instAnnotation string) (*v1alpha1.Instrumentation, error) {
 	instValue := annotationValue(ns.ObjectMeta, pod.ObjectMeta, instAnnotation)
+	if len(instValue) == 0 && pm.isDynamicInstrumentationEnabled(strings.TrimPrefix(instAnnotation, annotationInjectPrefix), pod) {
+		instValue = "true"
+	}
 
 	if len(instValue) == 0 || strings.EqualFold(instValue, "false") {
 		return nil, nil
@@ -518,4 +524,9 @@ func (pm *instPodMutator) validateInstrumentation(ctx context.Context, inst *v1a
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+func (pm *instPodMutator) isDynamicInstrumentationEnabled(instType string, pod corev1.Pod) bool {
+	// disregard instType for now
+	return pm.dynamicConfig.IsPodEnabled(pod)
 }

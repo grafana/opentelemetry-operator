@@ -19,6 +19,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	configmap "github.com/open-telemetry/opentelemetry-operator/pkg/config"
 	"os"
 	"regexp"
 	"runtime"
@@ -487,12 +488,20 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Instrumentation")
 			os.Exit(1)
 		}
+
+		setupLog.Info("Starting config map sync")
+		s, err := configmap.Start(ctx, ctrl.Log.WithName("configmap-sync"), clientset)
+		if err != nil {
+			setupLog.Error(err, "failed to start config map sync")
+			os.Exit(1)
+		}
+
 		decoder := admission.NewDecoder(mgr.GetScheme())
 		mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{
 			Handler: podmutation.NewWebhookHandler(cfg, ctrl.Log.WithName("pod-webhook"), decoder, mgr.GetClient(),
 				[]podmutation.PodMutator{
 					sidecar.NewMutator(logger, cfg, mgr.GetClient()),
-					instrumentation.NewMutator(logger, mgr.GetClient(), mgr.GetEventRecorderFor("opentelemetry-operator"), cfg),
+					instrumentation.NewMutator(logger, mgr.GetClient(), mgr.GetEventRecorderFor("opentelemetry-operator"), cfg, s),
 				}),
 		})
 
