@@ -79,11 +79,6 @@ func (dc DefinitionCriteria) Validate() error {
 // a given executable. If both OpenPorts and Path are defined, the inspected executable must fulfill both
 // properties.
 type Attributes struct {
-	// Name will define a name for the matching service. If unset, it will take the name of the executable process
-	Name string `yaml:"name"`
-	// Namespace will define a namespace for the matching service. If unset, it will be left empty.
-	Namespace string `yaml:"namespace"`
-
 	// Metadata stores other attributes, such as Kubernetes object metadata
 	Metadata map[string]*RegexpAttr `yaml:",inline"`
 
@@ -165,7 +160,7 @@ func diff(oldConfig Config, newConfig Config) (DefinitionCriteria, DefinitionCri
 }
 
 func equals(a, b Attributes) bool {
-	return a.Name == b.Name && a.Namespace == b.Namespace && regexMapEquals(a.Metadata, b.Metadata) && regexMapEquals(a.PodLabels, b.PodLabels)
+	return regexMapEquals(a.Metadata, b.Metadata) && regexMapEquals(a.PodLabels, b.PodLabels)
 }
 
 func regexMapEquals(a, b map[string]*RegexpAttr) bool {

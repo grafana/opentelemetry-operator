@@ -10,9 +10,7 @@ func TestCriteriaMatcher_MustMatchAllAttributes(t *testing.T) {
 	config := Config{}
 	require.NoError(t, yaml.Unmarshal([]byte(`discovery:
  services:
- - name: all-attributes-must-match
-   namespace: foons
-   k8s_namespace: thens
+ - k8s_namespace: thens
    k8s_pod_name: thepod
    k8s_deployment_name: thedepl
    k8s_replicaset_name: thers
