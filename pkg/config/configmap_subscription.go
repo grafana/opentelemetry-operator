@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
+	"slices"
 )
 
 type configMapSubscriptionMetrics struct {
@@ -98,6 +99,7 @@ func (c *ConfigMapLoader) Reconcile(object runtime.Object, event watch.EventType
 }
 
 func (c *ConfigMapLoader) Subscribe() (watch.Interface, error) {
+
 	var err error
 	c.watcherInterface, err = c.ClientSet.CoreV1().ConfigMaps(c.Namespace).Watch(c.Ctx, metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("metadata.name=%s", configMapName),
@@ -109,6 +111,16 @@ func (c *ConfigMapLoader) Subscribe() (watch.Interface, error) {
 	c.metrics = newConfigMapSubscriptionMetrics()
 
 	return c.watcherInterface, nil
+}
+
+func (c *ConfigMapLoader) IsPodEnabled(pod v1.Pod) bool {
+	attrs := getPodAttrs(pod)
+	for _, service := range c.Config.Discovery.Services {
+		if matchByAttributes(&attrs, &service) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *ConfigMapLoader) loadConfig(configMap *v1.ConfigMap) error {
@@ -125,18 +137,75 @@ func (c *ConfigMapLoader) loadConfig(configMap *v1.ConfigMap) error {
 	}
 
 	oldConfig := c.Config
-	diff(oldConfig, newConfig)
+	remove, add := diff(oldConfig, newConfig)
+
+	c.restartAll(remove)
+	c.restartAll(add)
 
 	// get all pods that match the new added/removed services
 	// restart those pods
 	// when they are restarted, they will pick up the new config from the admission controller
 
+	// how to see if the pod is currently instrumented:
+	// https://github.com/grafana/opentelemetry-operator/blob/4da4f66e0a4d59f0f99a6b6b3fcbd68523e0506c/pkg/instrumentation/helper.go#L46
+
 	//matchByAttributes(&attrs, &newConfig.Discovery.Services[0])
+
+	c.Config = newConfig
 
 	return err
 }
 
-func diff(oldConfig Config, newConfig Config) {
+func diff(oldConfig Config, newConfig Config) (DefinitionCriteria, DefinitionCriteria) {
+	var remove DefinitionCriteria
+	for _, old := range oldConfig.Discovery.Services {
+		if !slices.ContainsFunc(newConfig.Discovery.Services, func(attributes Attributes) bool {
+			return equals(attributes, old)
+		}) {
+			remove = append(remove, old)
+		}
+	}
+	var add DefinitionCriteria
+	for _, n := range newConfig.Discovery.Services {
+		if !slices.ContainsFunc(oldConfig.Discovery.Services, func(attributes Attributes) bool {
+			return equals(attributes, n)
+		}) {
+			add = append(add, n)
+		}
+	}
+
 	// added config parts: add instrumentation
 	// removed config parts: remove instrumentation
+	return remove, add
+}
+
+func equals(a, b Attributes) bool {
+	return a.Name == b.Name && a.Namespace == b.Namespace && regexMapEquals(a.Metadata, b.Metadata) && regexMapEquals(a.PodLabels, b.PodLabels)
+}
+func regexMapEquals(a, b map[string]*RegexpAttr) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		v2, ok := b[k]
+		if !ok {
+			return false
+		}
+		if v.re.String() != v2.re.String() {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *ConfigMapLoader) restartAll(remove DefinitionCriteria) {
+	//for _, attributes := range remove {
+	// do we need to get all pods or deployment to call matchByAttributes?
+	//matchByAttributes()
+	//}
+	// use https://stackoverflow.com/questions/61335318/how-to-restart-a-deployment-in-kubernetes-using-go-client
+}
+
+func (c *ConfigMapLoader) restartPod() {
+	// see https://stackoverflow.com/questions/61335318/how-to-restart-a-deployment-in-kubernetes-using-go-client
 }

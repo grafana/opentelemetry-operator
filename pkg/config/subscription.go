@@ -4,6 +4,7 @@
 package config
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 )
@@ -11,4 +12,5 @@ import (
 type Subscription interface {
 	Subscribe() (watch.Interface, error)
 	Reconcile(object runtime.Object, event watch.EventType)
+	IsPodEnabled(pod corev1.Pod) bool
 }

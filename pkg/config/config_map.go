@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-func Start(ctx context.Context, logger logr.Logger, clientSet *kubernetes.Clientset) error {
+func Start(ctx context.Context, logger logr.Logger, clientSet *kubernetes.Clientset) (Subscription, error) {
 	subscription := ConfigMapLoader{
 		Ctx:       ctx,
 		Logger:    logger,
@@ -21,7 +21,7 @@ func Start(ctx context.Context, logger logr.Logger, clientSet *kubernetes.Client
 
 	watchInterface, err := subscription.Subscribe()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	go func() {
 		for {
@@ -38,5 +38,5 @@ func Start(ctx context.Context, logger logr.Logger, clientSet *kubernetes.Client
 	}()
 
 	wg.Wait()
-	return nil
+	return &subscription, nil
 }
