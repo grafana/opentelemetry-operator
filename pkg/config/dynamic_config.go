@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"slices"
 	"sync"
 )
 
@@ -139,49 +138,6 @@ func (c *ConfigMapLoader) loadConfig(configMap *v1.ConfigMap) error {
 	c.Config = newConfig
 
 	return err
-}
-
-func diff(oldConfig Config, newConfig Config) (DefinitionCriteria, DefinitionCriteria) {
-	var remove DefinitionCriteria
-	for _, old := range oldConfig.Discovery.Services {
-		if !slices.ContainsFunc(newConfig.Discovery.Services, func(attributes Attributes) bool {
-			return equals(attributes, old)
-		}) {
-			remove = append(remove, old)
-		}
-	}
-	var add DefinitionCriteria
-	for _, n := range newConfig.Discovery.Services {
-		if !slices.ContainsFunc(oldConfig.Discovery.Services, func(attributes Attributes) bool {
-			return equals(attributes, n)
-		}) {
-			add = append(add, n)
-		}
-	}
-
-	// added config parts: add instrumentation
-	// removed config parts: remove instrumentation
-	return remove, add
-}
-
-func equals(a, b Attributes) bool {
-	return a.Name == b.Name && a.Namespace == b.Namespace && regexMapEquals(a.Metadata, b.Metadata) && regexMapEquals(a.PodLabels, b.PodLabels)
-}
-
-func regexMapEquals(a, b map[string]*RegexpAttr) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for k, v := range a {
-		v2, ok := b[k]
-		if !ok {
-			return false
-		}
-		if v.re.String() != v2.re.String() {
-			return false
-		}
-	}
-	return true
 }
 
 func (c *ConfigMapLoader) restartAll(remove DefinitionCriteria) {
