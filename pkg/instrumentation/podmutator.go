@@ -40,12 +40,12 @@ var (
 )
 
 type instPodMutator struct {
-	Client       client.Client
-	sdkInjector  *sdkInjector
-	Logger       logr.Logger
-	Recorder     record.EventRecorder
-	config       config.Config
-	subscription configmap.Subscription
+	Client        client.Client
+	sdkInjector   *sdkInjector
+	Logger        logr.Logger
+	Recorder      record.EventRecorder
+	config        config.Config
+	dynamicConfig configmap.DynamicConfig
 }
 
 type instrumentationWithContainers struct {
@@ -258,7 +258,7 @@ func (langInsts *languageInstrumentations) setLanguageSpecificContainers(ns meta
 
 var _ podmutation.PodMutator = (*instPodMutator)(nil)
 
-func NewMutator(logger logr.Logger, client client.Client, recorder record.EventRecorder, cfg config.Config, subscription configmap.Subscription) *instPodMutator {
+func NewMutator(logger logr.Logger, client client.Client, recorder record.EventRecorder, cfg config.Config, dynamicConfig configmap.DynamicConfig) *instPodMutator {
 	return &instPodMutator{
 		Logger: logger,
 		Client: client,
@@ -266,9 +266,9 @@ func NewMutator(logger logr.Logger, client client.Client, recorder record.EventR
 			logger: logger,
 			client: client,
 		},
-		Recorder:     recorder,
-		config:       cfg,
-		subscription: subscription,
+		Recorder:      recorder,
+		config:        cfg,
+		dynamicConfig: dynamicConfig,
 	}
 }
 
@@ -528,5 +528,5 @@ func (pm *instPodMutator) validateInstrumentation(ctx context.Context, inst *v1a
 
 func (pm *instPodMutator) isDynamicInstrumentationEnabled(instType string, pod corev1.Pod) bool {
 	// disregard instType for now
-	return pm.subscription.IsPodEnabled(pod)
+	return pm.dynamicConfig.IsPodEnabled(pod)
 }
