@@ -24,7 +24,7 @@ const (
 
 type DynamicConfig interface {
 	Subscribe() (watch.Interface, error)
-	Reconcile(object runtime.Object, event watch.EventType)
+	Reconcile(ctx context.Context, object runtime.Object, event watch.EventType)
 	IsPodEnabled(pod v1.Pod) bool
 }
 
@@ -58,7 +58,7 @@ func Start(ctx context.Context, logger logr.Logger, clientSet *kubernetes.Client
 			select {
 			case e, ok := <-watchInterface.ResultChan():
 				if ok && e.Type != watch.Error {
-					loader.Reconcile(e.Object, e.Type)
+					loader.Reconcile(ctx, e.Object, e.Type)
 				}
 			case <-ctx.Done():
 				wg.Done()
@@ -71,13 +71,13 @@ func Start(ctx context.Context, logger logr.Logger, clientSet *kubernetes.Client
 	return &loader, nil
 }
 
-func (c *ConfigMapLoader) Reconcile(object runtime.Object, event watch.EventType) {
+func (c *ConfigMapLoader) Reconcile(ctx context.Context, object runtime.Object, event watch.EventType) {
 	configMap := object.(*v1.ConfigMap)
 	c.Logger.Info("ConfigMap subscription event", event, "ConfigMap name", configMap.Name)
 
 	switch event {
 	case watch.Modified:
-		err := c.loadConfig(configMap)
+		err := c.loadConfig(ctx, configMap)
 		if err != nil {
 			c.Logger.Error(err, "error loading config")
 			return
@@ -107,7 +107,7 @@ func (c *ConfigMapLoader) IsPodEnabled(pod v1.Pod) bool {
 	return false
 }
 
-func (c *ConfigMapLoader) loadConfig(configMap *v1.ConfigMap) error {
+func (c *ConfigMapLoader) loadConfig(ctx context.Context, configMap *v1.ConfigMap) error {
 	s := configMap.Data[configMapKey]
 	newConfig := Config{}
 	err := yaml.Unmarshal([]byte(s), &newConfig)
@@ -123,31 +123,19 @@ func (c *ConfigMapLoader) loadConfig(configMap *v1.ConfigMap) error {
 	oldConfig := c.Config
 	remove, add := diff(oldConfig, newConfig)
 
-	c.restartAll(remove)
-	c.restartAll(add)
-
-	// get all pods that match the new added/removed services
-	// restart those pods
-	// when they are restarted, they will pick up the new config from the admission controller
-
-	// how to see if the pod is currently instrumented:
-	// https://github.com/grafana/opentelemetry-operator/blob/4da4f66e0a4d59f0f99a6b6b3fcbd68523e0506c/pkg/instrumentation/helper.go#L46
-
-	//matchByAttributes(&attrs, &newConfig.Discovery.Services[0])
+	c.restartAll(ctx, remove)
+	c.restartAll(ctx, add)
 
 	c.Config = newConfig
 
 	return err
 }
 
-func (c *ConfigMapLoader) restartAll(remove DefinitionCriteria) {
-	//for _, attributes := range remove {
-	// do we need to get all pods or deployment to call matchByAttributes?
-	//matchByAttributes()
-	//}
-	// use https://stackoverflow.com/questions/61335318/how-to-restart-a-deployment-in-kubernetes-using-go-client
-}
-
-func (c *ConfigMapLoader) restartPod() {
-	// see https://stackoverflow.com/questions/61335318/how-to-restart-a-deployment-in-kubernetes-using-go-client
+func (c *ConfigMapLoader) restartAll(ctx context.Context, criteria DefinitionCriteria) {
+	for _, criterion := range criteria {
+		err := restartObjectWithAttributes(ctx, c.ClientSet, &criterion)
+		if err != nil {
+			c.Logger.Error(err, "error restarting object")
+		}
+	}
 }
