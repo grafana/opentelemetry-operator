@@ -51,6 +51,7 @@ import (
 	"github.com/open-telemetry/opentelemetry-operator/internal/autodetect/targetallocator"
 	"github.com/open-telemetry/opentelemetry-operator/internal/config"
 	"github.com/open-telemetry/opentelemetry-operator/internal/controllers"
+	"github.com/open-telemetry/opentelemetry-operator/internal/deviceplugin"
 	"github.com/open-telemetry/opentelemetry-operator/internal/fips"
 	"github.com/open-telemetry/opentelemetry-operator/internal/instrumentation"
 	instrumentationupgrade "github.com/open-telemetry/opentelemetry-operator/internal/instrumentation/upgrade"
@@ -378,6 +379,23 @@ func main() {
 		}
 	}
 
+	if featuregate.EnableDevicePluginInjection.IsEnabled() {
+		operatorNS := os.Getenv("NAMESPACE")
+		if operatorNS == "" {
+			operatorNS = "opentelemetry-operator-system"
+		}
+		if err = deviceplugin.NewReconciler(
+			mgr.GetClient(),
+			mgr.GetScheme(),
+			ctrl.Log.WithName("controllers").WithName("DevicePlugin"),
+			operatorNS,
+			cfg.DevicePluginImage,
+		).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "DevicePlugin")
+			os.Exit(1)
+		}
+	}
+
 	if cfg.EnableWebhooks {
 		var crdMetrics *otelv1beta1.Metrics
 
@@ -433,12 +451,16 @@ func main() {
 			os.Exit(1)
 		}
 		decoder := admission.NewDecoder(mgr.GetScheme())
+		mutators := []podmutation.PodMutator{
+			sidecar.NewMutator(logger, cfg, mgr.GetClient()),
+		}
+		if featuregate.EnableDevicePluginInjection.IsEnabled() {
+			mutators = append(mutators, deviceplugin.NewMutator(logger, mgr.GetClient()))
+		} else {
+			mutators = append(mutators, instrumentation.NewMutator(logger, mgr.GetClient(), mgr.GetEventRecorderFor("opentelemetry-operator"), cfg))
+		}
 		mgr.GetWebhookServer().Register("/mutate-v1-pod", &webhook.Admission{
-			Handler: podmutation.NewWebhookHandler(cfg, ctrl.Log.WithName("pod-webhook"), decoder, mgr.GetClient(),
-				[]podmutation.PodMutator{
-					sidecar.NewMutator(logger, cfg, mgr.GetClient()),
-					instrumentation.NewMutator(logger, mgr.GetClient(), mgr.GetEventRecorderFor("opentelemetry-operator"), cfg),
-				}),
+			Handler: podmutation.NewWebhookHandler(cfg, ctrl.Log.WithName("pod-webhook"), decoder, mgr.GetClient(), mutators),
 		})
 
 		if cfg.OpAmpBridgeAvailability == opampbridge.Available {

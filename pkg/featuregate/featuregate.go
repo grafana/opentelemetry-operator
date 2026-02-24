@@ -58,6 +58,13 @@ var (
 		featuregate.WithRegisterDescription("enables the ClusterObservability controller for managed observability deployment"),
 		featuregate.WithRegisterFromVersion("v0.134.0"),
 	)
+	// EnableDevicePluginInjection is the feature gate that enables device-plugin-based
+	// auto-instrumentation instead of init containers.
+	EnableDevicePluginInjection = featuregate.GlobalRegistry().MustRegister(
+		"operator.instrumentation.deviceplugin",
+		featuregate.StageAlpha,
+		featuregate.WithRegisterDescription("enables device-plugin-based auto-instrumentation instead of init containers"),
+	)
 )
 
 // Flags creates a new FlagSet that represents the available featuregate flags using the supplied featuregate registry.

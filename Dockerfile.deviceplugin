@@ -1,0 +1,28 @@
+# Build the device plugin binary.
+FROM golang:1.25 AS builder
+
+WORKDIR /workspace
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY cmd/device-plugin/ cmd/device-plugin/
+COPY apis/ apis/
+COPY internal/ internal/
+COPY pkg/ pkg/
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o device-plugin ./cmd/device-plugin/
+
+# Download the Java agent JAR.
+FROM curlimages/curl:latest AS agent
+ARG JAVA_AGENT_VERSION=2.14.0
+RUN curl -L -o /tmp/opentelemetry-javaagent.jar \
+    "https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${JAVA_AGENT_VERSION}/opentelemetry-javaagent.jar"
+
+# Final image.
+FROM gcr.io/distroless/static:nonroot
+
+COPY --from=builder /workspace/device-plugin /device-plugin
+COPY --from=agent /tmp/opentelemetry-javaagent.jar /otel-agents/opentelemetry-javaagent.jar
+
+USER 65532:65532
+ENTRYPOINT ["/device-plugin"]

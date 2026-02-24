@@ -57,6 +57,9 @@ OPERATOROPAMPBRIDGE_IMG ?= ${IMG_PREFIX}/${OPERATOROPAMPBRIDGE_IMG_REPO}:$(addpr
 BRIDGETESTSERVER_IMG_REPO ?= e2e-test-app-bridge-server
 BRIDGETESTSERVER_IMG ?= ${IMG_PREFIX}/${BRIDGETESTSERVER_IMG_REPO}:ve2e
 
+DEVICEPLUGIN_IMG_REPO ?= device-plugin
+DEVICEPLUGIN_IMG ?= ${IMG_PREFIX}/${DEVICEPLUGIN_IMG_REPO}:e2e
+
 INSTRUMENTATION_JAVA_IMG_REPO ?= autoinstrumentation-java
 INSTRUMENTATION_JAVA_IMG ?= ${IMG_PREFIX}/${INSTRUMENTATION_JAVA_IMG_REPO}:${INSTRUMENTATION_JAVA_VERSION}
 
@@ -537,6 +540,11 @@ container-must-gather: must-gather
 container-must-gather-push:
 	docker push ${MUSTGATHER_IMG}
 
+# Build device plugin container image
+.PHONY: container-device-plugin
+container-device-plugin:
+	docker build -f Dockerfile.deviceplugin --load -t ${DEVICEPLUGIN_IMG} .
+
 # Build Java auto-instrumentation container image
 .PHONY: container-instrumentation-java
 container-instrumentation-java:
@@ -633,6 +641,11 @@ load-image-bridge-test-server: container-bridge-test-server kind
 .PHONY: load-image-operator-opamp-bridge
 load-image-operator-opamp-bridge: container-operator-opamp-bridge kind
 	$(KIND) load --name $(KIND_CLUSTER_NAME) docker-image ${OPERATOROPAMPBRIDGE_IMG}
+
+# Load device plugin image into kind cluster
+.PHONY: load-image-device-plugin
+load-image-device-plugin: container-device-plugin kind
+	$(KIND) load --name $(KIND_CLUSTER_NAME) docker-image ${DEVICEPLUGIN_IMG}
 
 # Load all instrumentation images into kind cluster
 .PHONY: load-images-instrumentation

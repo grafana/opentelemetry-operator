@@ -119,6 +119,8 @@ type Config struct {
 	CreateServiceMonitorOperatorMetrics bool `yaml:"create-service-monitor-operator-metrics"`
 	// WebhookPort is the port the webhook endpoint binds to.
 	WebhookPort int `yaml:"webhook-port"`
+	// DevicePluginImage is the image used for the device-plugin DaemonSet managed by the operator.
+	DevicePluginImage string `yaml:"device-plugin-image"`
 	// FipsDisabledComponents are disabled collector components when operator runs on FIPS enabled platform
 	FipsDisabledComponents string `yaml:"fips-disabled-components"`
 	// TLS holds the TLS configuration of the controllers.

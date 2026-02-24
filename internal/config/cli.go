@@ -48,6 +48,7 @@ func CreateCLIParser(cfg Config) *pflag.FlagSet {
 	f.String("auto-instrumentation-go-image", cfg.AutoInstrumentationGoImage, "The default OpenTelemetry Go instrumentation image. This image is used when no image is specified in the CustomResource.")
 	f.String("auto-instrumentation-apache-httpd-image", cfg.AutoInstrumentationApacheHttpdImage, "The default OpenTelemetry Apache HTTPD instrumentation image. This image is used when no image is specified in the CustomResource.")
 	f.String("auto-instrumentation-nginx-image", cfg.AutoInstrumentationNginxImage, "The default OpenTelemetry Nginx instrumentation image. This image is used when no image is specified in the CustomResource.")
+	f.String("device-plugin-image", cfg.DevicePluginImage, "The image for the device-plugin DaemonSet managed by the operator.")
 	f.StringArray("labels-filter", cfg.LabelsFilter, "Labels to filter away from propagating onto deploys. It should be a string array containing patterns, which are literal strings optionally containing a * wildcard character. Example: --labels-filter=.*filter.out will filter out labels that looks like: label.filter.out: true")
 	f.StringArray("annotations-filter", cfg.AnnotationsFilter, "Annotations to filter away from propagating onto deploys. It should be a string array containing patterns, which are literal strings optionally containing a * wildcard character. Example: --annotations-filter=.*filter.out will filter out annotations that looks like: annotation.filter.out: true")
 	f.String("fips-disabled-components", cfg.FipsDisabledComponents, "Disabled collector components when operator runs on FIPS enabled platform. Example flag value =receiver.foo,receiver.bar,exporter.baz")
@@ -112,6 +113,8 @@ func ApplyCLI(cfg *Config) error {
 				cfg.AutoInstrumentationApacheHttpdImage, _ = f.GetString("auto-instrumentation-apache-httpd-image")
 			case "auto-instrumentation-nginx-image":
 				cfg.AutoInstrumentationNginxImage, _ = f.GetString("auto-instrumentation-nginx-image")
+			case "device-plugin-image":
+				cfg.DevicePluginImage, _ = f.GetString("device-plugin-image")
 			case "labels-filter":
 				cfg.LabelsFilter, _ = f.GetStringArray("labels-filter")
 			case "annotations-filter":

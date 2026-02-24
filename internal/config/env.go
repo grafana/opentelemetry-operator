@@ -40,6 +40,9 @@ func ApplyEnvVars(cfg *Config) {
 	if v, ok := os.LookupEnv("RELATED_IMAGE_AUTO_INSTRUMENTATION_NGINX"); ok {
 		cfg.AutoInstrumentationNginxImage = v
 	}
+	if v, ok := os.LookupEnv("RELATED_IMAGE_DEVICE_PLUGIN"); ok {
+		cfg.DevicePluginImage = v
+	}
 
 	if v, ok := os.LookupEnv("OPENSHIFT_CREATE_DASHBOARD"); ok {
 		cfg.OpenshiftCreateDashboard, _ = strconv.ParseBool(v)

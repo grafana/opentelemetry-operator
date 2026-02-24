@@ -33,6 +33,7 @@ func TestToStringMap(t *testing.T) {
 		"collector-image":                         "myexample:1.0",
 		"create-rbac-permissions":                 "0",
 		"create-service-monitor-operator-metrics": "false",
+		"device-plugin-image":                     "",
 		"enable-apache-httpd-instrumentation":     "false",
 		"enable-cr-metrics":                       "false",
 		"enable-dot-net-auto-instrumentation":     "false",
