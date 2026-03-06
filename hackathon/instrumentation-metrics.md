@@ -77,7 +77,7 @@ Metrics update event-driven with the rollback controller's existing reconcile tr
 | Crash detected → rollback triggered | existing rollback logic triggers reconcile → `rolled_back` captured |
 | CR deleted | `DeleteCR` clears all measurements for that CR |
 
-**Known gap:** A pod whose labels change to start matching a rule (`unmatched → pending_restart`) won't trigger `isRelevantPod`. Metrics for that pod lag until the next CR event. Acceptable edge case.
+**Known gap:** A pod whose labels change to start matching a rule (`unmatched → pending_restart`) won't trigger `isRelevantPod`, so metrics for that pod lag until the next CR event. This is an acceptable edge case.
 
 ## Scoping
 
