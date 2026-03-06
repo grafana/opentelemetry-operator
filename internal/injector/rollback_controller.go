@@ -37,16 +37,19 @@ const (
 // on Instrumentation CRs.
 type RollbackReconciler struct {
 	client.Client
-	log   logr.Logger
-	clock clockutil.Clock
+	log     logr.Logger
+	clock   clockutil.Clock
+	metrics *v2alpha1.InstrumentationMetrics
 }
 
 // NewRollbackReconciler creates a new RollbackReconciler.
-func NewRollbackReconciler(c client.Client, _ *runtime.Scheme, log logr.Logger) *RollbackReconciler {
+// metrics may be nil, in which case metric reporting is skipped.
+func NewRollbackReconciler(c client.Client, _ *runtime.Scheme, log logr.Logger, metrics *v2alpha1.InstrumentationMetrics) *RollbackReconciler {
 	return &RollbackReconciler{
-		Client: c,
-		log:    log,
-		clock:  clockutil.RealClock{},
+		Client:  c,
+		log:     log,
+		clock:   clockutil.RealClock{},
+		metrics: metrics,
 	}
 }
 
@@ -140,6 +143,9 @@ func (r *RollbackReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	if inst.DeletionTimestamp != nil {
+		if r.metrics != nil {
+			r.metrics.DeleteCR(inst.Name)
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -218,6 +224,9 @@ func (r *RollbackReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Update status.
 	inst.Status.InstrumentedWorkloads = entries
+	if r.metrics != nil {
+		r.metrics.UpdateCR(inst.Name, computeStatusCounts(&inst, cache, entries))
+	}
 	if err := r.Status().Update(ctx, &inst); err != nil {
 		return ctrl.Result{}, err
 	}

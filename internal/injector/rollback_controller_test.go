@@ -33,7 +33,7 @@ func newRollbackReconciler(fakeClock *clocktesting.FakeClock, objs ...client.Obj
 		WithStatusSubresource(&v2alpha1.Instrumentation{}).
 		Build()
 
-	r := NewRollbackReconciler(cli, s, logr.Discard())
+	r := NewRollbackReconciler(cli, s, logr.Discard(), nil)
 	r.clock = fakeClock
 	return r, cli
 }

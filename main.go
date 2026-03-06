@@ -22,6 +22,9 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	colfeaturegate "go.opentelemetry.io/collector/featuregate"
+	prometheusexporter "go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap/zapcore"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -390,10 +394,31 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize the OTel meter provider once, shared by collector CR metrics and
+	// instrumentation status metrics. Gated on EnableCRMetrics to match existing convention.
+	var crdMeterProvider metric.MeterProvider
+	if cfg.EnableCRMetrics {
+		exporter, metricsErr := prometheusexporter.New(prometheusexporter.WithRegisterer(ctrlmetrics.Registry))
+		if metricsErr != nil {
+			setupLog.Error(metricsErr, "Error bootstrapping CRD metrics")
+		} else {
+			crdMeterProvider = sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter))
+		}
+	}
+
+	var instrMetrics *otelv2alpha1.InstrumentationMetrics
+	if crdMeterProvider != nil {
+		instrMetrics, err = otelv2alpha1.NewInstrumentationMetrics(crdMeterProvider)
+		if err != nil {
+			setupLog.Error(err, "Error init instrumentation metrics")
+		}
+	}
+
 	if err = injector.NewRollbackReconciler(
 		mgr.GetClient(),
 		mgr.GetScheme(),
 		ctrl.Log.WithName("controllers").WithName("RollbackController"),
+		instrMetrics,
 	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "RollbackController")
 		os.Exit(1)
@@ -407,13 +432,8 @@ func main() {
 	if cfg.EnableWebhooks {
 		var crdMetrics *otelv1beta1.Metrics
 
-		if cfg.EnableCRMetrics {
-			meterProvider, metricsErr := otelv1beta1.BootstrapMetrics()
-			if metricsErr != nil {
-				setupLog.Error(metricsErr, "Error bootstrapping CRD metrics")
-			}
-
-			crdMetrics, err = otelv1beta1.NewMetrics(meterProvider, ctx, mgr.GetAPIReader())
+		if crdMeterProvider != nil {
+			crdMetrics, err = otelv1beta1.NewMetrics(crdMeterProvider, ctx, mgr.GetAPIReader())
 			if err != nil {
 				setupLog.Error(err, "Error init CRD metrics")
 			}

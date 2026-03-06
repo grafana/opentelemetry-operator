@@ -98,11 +98,11 @@ func TestCheckImageVolumeSupport_NoNodes(t *testing.T) {
 
 func TestParseContainerdVersion(t *testing.T) {
 	tests := []struct {
-		runtime       string
+		runtime        string
 		wantContainerd bool
-		wantMajor     int
-		wantMinor     int
-		wantErr       bool
+		wantMajor      int
+		wantMinor      int
+		wantErr        bool
 	}{
 		{"containerd://2.1.3", true, 2, 1, false},
 		{"containerd://1.7.23", true, 1, 7, false},

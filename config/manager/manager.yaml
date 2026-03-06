@@ -63,7 +63,10 @@ spec:
                 fieldPath: metadata.namespace
           - name: METRICS_ADDR
             value: ":8443"
+          # TODO: revert both of these before merging — dev-only settings
           - name: METRICS_SECURE
+            value: "false"
+          - name: ENABLE_CR_METRICS
             value: "true"
           - name: ENABLE_LEADER_ELECTION
             value: "true"

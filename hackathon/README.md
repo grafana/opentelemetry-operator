@@ -15,7 +15,8 @@ Replace per-language auto-instrumentation with a single composite SDK image that
 | [Injection flow](injection-flow.md) | How operator + injector work together, env vars, building from source, e2e testing |
 | [Schema](schema.md) | CRD schema design, shape, key decisions, known gaps |
 | [Crash-loop recovery](crashloop-recovery.md) | Auto-detection, timing model, rollback flow, schema additions |
-| [Status sidecar](status-sidecar.md) | Pod bouncing + operator telemetry via Prometheus-compatible sidecar |
+| [Instrumentation metrics](instrumentation-metrics.md) | Prometheus metric for per-workload instrumentation status (instrumented, pending_restart, rolled_back, skipped, unmatched) |
+| [Status sidecar](status-sidecar.md) | Pod bouncing + operator telemetry via Prometheus-compatible sidecar (superseded by instrumentation metrics) |
 | [v1alpha1 comparison](v1alpha1-comparison.md) | What changed vs v1alpha1 and why |
 | [Decisions](decisions.md) | Mar 4 sync decisions, future work |
 | [CRASHLOOP-RECOVERY-DESIGN.md](../CRASHLOOP-RECOVERY-DESIGN.md) | Full design rationale and research for crash-loop recovery |
@@ -33,7 +34,10 @@ Replace per-language auto-instrumentation with a single composite SDK image that
 | `internal/injector/inject.go` | Pod mutation logic (init container, env vars, config mount) |
 | `internal/injector/controller.go` | Reconciler — ConfigMap lifecycle for declarativeConfig |
 | `internal/injector/inject_test.go` | Unit tests |
-| `main.go` | Scheme + mutator + controller registration |
+| `internal/injector/rollback_controller.go` | Crash-loop detection, workload inventory, rollback triggering, metrics update |
+| `internal/injector/metrics.go` | Pod classification logic (`computeStatusCounts`, `findRuleForPod`) |
+| `apis/v2alpha1/metrics.go` | `InstrumentationMetrics` — OTel observable counter registration and thread-safe measurement store |
+| `main.go` | Scheme + mutator + controller registration; meter provider bootstrap |
 
 ## After changing CRD types
 
@@ -54,3 +58,4 @@ Use [kubebuilder markers](https://book.kubebuilder.io/reference/markers) for val
 - [x] **Instrumentation status data model** (Gregor) — Add `status.instrumentedWorkloads[]` to CRD. Foundation for crash-loop recovery, pod bouncing, and internal telemetry
 - [x] **Crash-loop auto-recovery** (Gregor) — detect instrumentation-induced pod failures and avoid re-instrumenting failing pods. See [crash-loop recovery](crashloop-recovery.md)
 - [x] **N+1 pod listing in rollback controller** — `buildWorkloadInventory` and `checkCrashState` now share a per-namespace pod cache within each reconcile loop, reducing API calls from O(rules x namespaces + workloads) to O(namespaces).
+- [x] **Instrumentation status metrics** — `otel.operator.instrumented.pods` observable counter reporting per-workload pod counts broken down by status (`instrumented`, `pending_restart`, `rolled_back`, `skipped`, `unmatched`). Driven by rollback controller; zero extra API calls. See [instrumentation metrics](instrumentation-metrics.md).

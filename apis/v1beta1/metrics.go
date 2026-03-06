@@ -9,11 +9,8 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/metric"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 const (
@@ -50,15 +47,6 @@ type Metrics struct {
 	processorCounter  metric.Int64UpDownCounter
 	extensionsCounter metric.Int64UpDownCounter
 	connectorsCounter metric.Int64UpDownCounter
-}
-
-// BootstrapMetrics configures the OpenTelemetry meter provider with the Prometheus exporter.
-func BootstrapMetrics() (metric.MeterProvider, error) {
-	exporter, err := prometheus.New(prometheus.WithRegisterer(metrics.Registry))
-	if err != nil {
-		return nil, err
-	}
-	return sdkmetric.NewMeterProvider(sdkmetric.WithReader(exporter)), err
 }
 
 func NewMetrics(prv metric.MeterProvider, ctx context.Context, cl client.Reader) (*Metrics, error) {
