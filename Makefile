@@ -639,6 +639,10 @@ add-image-injector:
 	$(SED_INPLACE) 's|{{INJECTOR_JAVA_IMG}}|$(INJECTOR_JAVA_IMG)|g' tests/e2e-instrumentation/injector-java/00-install-instrumentation.yaml
 	$(SED_INPLACE) 's|{{INJECTOR_JAVA_IMG}}|$(INJECTOR_JAVA_IMG)|g' tests/e2e-instrumentation/injector-mode-conflict/00-install-instrumentation.yaml
 	$(SED_INPLACE) 's|{{INJECTOR_NODEJS_IMG}}|$(INJECTOR_NODEJS_IMG)|g' tests/e2e-instrumentation/injector-nodejs/00-install-instrumentation.yaml
+	$(SED_INPLACE) 's|{{INJECTOR_IMG}}|$(INJECTOR_IMG)|g' tests/e2e-instrumentation/injector-java/01-assert.yaml
+	$(SED_INPLACE) 's|{{INJECTOR_JAVA_IMG}}|$(INJECTOR_JAVA_IMG)|g' tests/e2e-instrumentation/injector-java/01-assert.yaml
+	$(SED_INPLACE) 's|{{INJECTOR_IMG}}|$(INJECTOR_IMG)|g' tests/e2e-instrumentation/injector-nodejs/01-assert.yaml
+	$(SED_INPLACE) 's|{{INJECTOR_NODEJS_IMG}}|$(INJECTOR_NODEJS_IMG)|g' tests/e2e-instrumentation/injector-nodejs/01-assert.yaml
 
 ##@ Kind Cluster
 # Start kind cluster for local development
