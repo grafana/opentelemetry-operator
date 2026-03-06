@@ -32,7 +32,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         - name: NODEJS_AUTO_INSTRUMENTATION_AGENT_PATH
-          value: /otel/register.js
+          value: /otel-nodejs/autoinstrumentation/register.js
         - name: OTEL_INJECTOR_K8S_NAMESPACE_NAME
           valueFrom:
             fieldRef:
@@ -58,19 +58,22 @@ spec:
       volumeMounts:
         - name: otel-injector
           mountPath: /otel
-  initContainers:
-    - name: otel-injector-init
-    - name: otel-injector-init-nodejs
+          readOnly: true
+        - name: otel-injector-nodejs
+          mountPath: /otel-nodejs
+          readOnly: true
+  volumes:
+    - name: otel-injector
+      image:
+        reference: "{{INJECTOR_IMG}}"
+    - name: otel-injector-nodejs
+      image:
+        reference: "{{INJECTOR_NODEJS_IMG}}"
 status:
   containerStatuses:
     - name: myapp
       ready: true
       started: true
-  initContainerStatuses:
-    - name: otel-injector-init
-      ready: true
-    - name: otel-injector-init-nodejs
-      ready: true
   phase: Running
 ---
 apiVersion: apps/v1
