@@ -181,6 +181,16 @@ otel_injector_injection_result{result="success"} 1
 
 Both Option B (env var + shareProcessNamespace) and Option C (status file) assume the injector binary detects the language and can report it back. In the composite SDK injection model, **the injector doesn't know the language**. It's language-agnostic — it sets up LD_PRELOAD and the composite SDK handles everything. Since the injector doesn't detect language, it can't report it, which invalidates both approaches.
 
-## Recommendation
+## Conclusion: scoped out
 
-**Option A (collector metric)** is the only viable approach. It doesn't depend on the injector knowing the language — it uses `telemetry.sdk.language` from the SDK itself, which is set regardless of how instrumentation was injected. Zero pod changes, zero injector changes, follows the natural telemetry data flow. Accept the 10-60s latency and bounce-all fallback.
+After design exploration and discussion with Nikola, we're scoping selective pod bouncing out of the hackathon.
+
+**Why:** All three approaches have fundamental gaps for reliable automation:
+
+- **Option A (collector metric)** is the least invasive but depends on a signal that may never arrive — if a service has no traffic, hasn't exported telemetry yet, or the collector pipeline is misconfigured, the operator has no language data. You can't build reliable bounce automation on a signal with no delivery guarantee. Even with "unknown → skip" as a safe default, coverage is only as good as telemetry flow.
+- **Options B and C (sidecar-based)** require injector changes that don't fit the composite SDK model, where the injector is language-agnostic.
+- **Daemonset approach** (as used by Odigos, Datadog, Beyla) would give reliable process-level language detection but is a major architectural addition — the OTel operator currently has zero node-level components. This needs broader community discussion, not a hackathon.
+
+**Key insight from Nikola:** The real problem isn't language detection — it's "which pods are eligible for bouncing." Language is a subset. A daemonset can inspect processes to determine language, command-line arguments, and eligibility, solving the problem reliably. Without one, any approach has blind spots.
+
+**Learnings preserved:** The three options and their trade-offs are documented above for future reference if the community decides to tackle this.
