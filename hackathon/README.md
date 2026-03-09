@@ -45,6 +45,7 @@ make prepare-e2e                    # builds images, starts kind, deploys operat
 
 | Doc | Content |
 |-----|---------|
+| [Operator autoinstrumentation redesign](https://github.com/grafana/internal-docs/blob/main/docs/obi/2026-03-02-operator-autoinstrumentation-redesign.md) | Internal design doc — motivation, architecture, rollout plan |
 | [Injection flow](injection-flow.md) | How operator + injector work together, env vars, building from source, e2e testing |
 | [Schema](schema.md) | CRD schema design, shape, key decisions, known gaps |
 | [Crash-loop recovery](crashloop-recovery.md) | Auto-detection, timing model, rollback flow, schema additions |
