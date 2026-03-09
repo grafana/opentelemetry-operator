@@ -6,7 +6,8 @@ Replace per-language auto-instrumentation with a single composite SDK image that
 
 ## Branch
 
-`hackathon-16-composite-sdk-injection` on `grafana/opentelemetry-operator`
+- [hackathon-16-composite-sdk-injection](https://github.com/grafana/opentelemetry-operator/tree/hackathon-16-composite-sdk-injection) on `grafana/opentelemetry-operator`
+- [hackathon-16-mode-support](https://github.com/grafana/opentelemetry-injector/tree/hackathon-16-mode-support) in `grafana/opentelemetry-injector`
 
 ## Design docs
 
