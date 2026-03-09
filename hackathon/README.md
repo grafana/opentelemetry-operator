@@ -2,7 +2,39 @@
 
 ## Goal
 
-Replace per-language auto-instrumentation with a single composite SDK image that bundles all language agents and an injector binary. The operator injects this image via init container and the injector handles language detection and agent setup at runtime.
+Replace per-language auto-instrumentation with a single composite SDK image that bundles all language agents and an injector binary. The operator injects this image via `LD_PRELOAD` + image volumes and the injector handles language detection and agent setup at runtime.
+
+## Status (as of 2026-03-09)
+
+**Working end-to-end:** 9/10 e2e tests pass. The new v2alpha1 Instrumentation CRD, webhook injection, declarative config, mode support, namespace/pod-label selectors, and per-language agent images all work.
+
+### What's done
+
+- v2alpha1 Instrumentation CRD (cluster-scoped, rule-based, priority ordering)
+- Webhook pod mutation: `LD_PRELOAD` injection, image volumes, env vars, downward API
+- Per-language agent images (Java, Node.js, Python, .NET) via separate image volumes
+- Declarative config support (inline OTel config → ConfigMap → `OTEL_CONFIG_FILE`)
+- Conflict-aware modes: `install`, `skip`, `install_unless_conflict`
+- Namespace selectors, pod label selectors, container name selectors
+- Crash-loop rollback controller (detection + bounce works, but see gap below)
+- Instrumentation status metrics (`otel_injector_instrumented_workloads` counter)
+- E2e tests for all of the above
+
+### Known gaps / TODOs
+
+1. **Rollback race condition** — rollback detection and bounce work (e2e step-02 passes), but new pods after the bounce still get injected because the status update hasn't propagated to the webhook's informer cache. See [e2e-test-fixes.md](e2e-test-fixes.md) and [schema.md](schema.md#known-gaps-future-work).
+2. **Tests must run sequentially** — `concurrent: false` is set on all injector tests because the CRD is cluster-scoped and catch-all rules cause cross-contamination in parallel runs.
+3. **Namespace label selectors** — only exact name matching, no label-based namespace selection.
+4. **Instrumentation removal** — when workloads stop matching rules, existing pods keep `LD_PRELOAD` until manually restarted.
+5. **TLS / volume mounts** — no mechanism for cert files in instrumented containers.
+
+### How to pick up work
+
+```bash
+git checkout hackathon-16-composite-sdk-injection
+make prepare-e2e                    # builds images, starts kind, deploys operator
+./bin/chainsaw test ./tests/e2e-instrumentation/injector-*/   # run all injector tests
+```
 
 ## Branch
 
