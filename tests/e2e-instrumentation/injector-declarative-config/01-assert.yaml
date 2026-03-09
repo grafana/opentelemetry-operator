@@ -7,35 +7,58 @@ spec:
   containers:
     - name: myapp
       env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://otel-collector:4318
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: http/protobuf
+        - name: OTEL_NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: OTEL_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         - name: LD_PRELOAD
           value: /otel/autoinstrumentation/libotelinject.so
         - name: OTEL_INJECTOR_CONFIG_FILE
-          value: /otel/injector/otelinject.conf
-        - name: OTEL_EXPORTER_OTLP_ENDPOINT
-          value: http://otel-collector:4318
-        - name: OTEL_CONFIG_FILE
-          value: /otel/config/otel-config.yaml
-        - name: OTEL_EXPERIMENTAL_CONFIG_FILE
-          value: /otel/config/otel-config.yaml
+          value: /otel/autoinstrumentation/injector/otelinject.conf
+        - name: OTEL_INJECTOR_K8S_NAMESPACE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: OTEL_INJECTOR_K8S_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: OTEL_INJECTOR_K8S_POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
+        - name: OTEL_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         - name: OTEL_INJECTOR_K8S_CONTAINER_NAME
           value: myapp
         - name: OTEL_INJECTOR_SERVICE_NAME
           value: my-app
         - name: OTEL_INJECTOR_SERVICE_NAMESPACE
         - name: OTEL_INJECTOR_RESOURCE_ATTRIBUTES
+        - name: OTEL_INJECTOR_MODE
+          value: install_unless_conflict
+        - name: OTEL_CONFIG_FILE
+          value: /otel-config/otel-config.yaml
+        - name: OTEL_EXPERIMENTAL_CONFIG_FILE
+          value: /otel-config/otel-config.yaml
       volumeMounts:
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
         - name: otel-injector
           mountPath: /otel
           readOnly: true
         - name: otel-config-with-config
-          mountPath: /otel/config
+          mountPath: /otel-config
           readOnly: true
-  volumes:
-    - name: otel-injector
-      image:
-        reference: busybox:latest
-    - name: otel-config-with-config
-      configMap:
-        name: otel-injector-injector-declarative-config-with-config
 status:
   phase: Running

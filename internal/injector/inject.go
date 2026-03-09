@@ -211,8 +211,9 @@ func matchRule(rules []v2alpha1.Rule, namespace string, podLabels map[string]str
 	return nil
 }
 
-// matchesNamespace returns true if the selector's namespace list contains the given namespace,
-// or is empty (catch-all). Catch-all rules skip Kubernetes system namespaces (kube-*).
+// matchesNamespace returns true if the selector's namespace list contains the given namespace.
+// When the selector has no explicit namespaces (catch-all), it matches all non-system namespaces.
+// The Instrumentation CR is cluster-scoped, so catch-all rules apply broadly.
 func matchesNamespace(sel v2alpha1.RuleSelector, namespace string) bool {
 	if len(sel.Namespaces) == 0 {
 		return !isSystemNamespace(namespace)

@@ -29,6 +29,7 @@ func TestSelectInstrumentation_HigherPriorityWins(t *testing.T) {
 	lowPriority := &v2alpha1.Instrumentation{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "low",
+			Namespace:         "default",
 			CreationTimestamp: metav1.NewTime(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)),
 		},
 		Spec: v2alpha1.InstrumentationSpec{
@@ -40,6 +41,7 @@ func TestSelectInstrumentation_HigherPriorityWins(t *testing.T) {
 	highPriority := &v2alpha1.Instrumentation{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "high",
+			Namespace:         "default",
 			CreationTimestamp: metav1.NewTime(time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC)),
 		},
 		Spec: v2alpha1.InstrumentationSpec{
@@ -70,6 +72,7 @@ func TestSelectInstrumentation_OldestWinsTie(t *testing.T) {
 	older := &v2alpha1.Instrumentation{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "older",
+			Namespace:         "default",
 			CreationTimestamp: metav1.NewTime(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)),
 		},
 		Spec: v2alpha1.InstrumentationSpec{
@@ -81,6 +84,7 @@ func TestSelectInstrumentation_OldestWinsTie(t *testing.T) {
 	newer := &v2alpha1.Instrumentation{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "newer",
+			Namespace:         "default",
 			CreationTimestamp: metav1.NewTime(time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)),
 		},
 		Spec: v2alpha1.InstrumentationSpec{
@@ -141,7 +145,7 @@ func TestSelectInstrumentation_NoMatchReturnsNil(t *testing.T) {
 
 func TestSelectInstrumentation_MatchesByPodLabels(t *testing.T) {
 	cr := &v2alpha1.Instrumentation{
-		ObjectMeta: metav1.ObjectMeta{Name: "label-match"},
+		ObjectMeta: metav1.ObjectMeta{Name: "label-match", Namespace: "default"},
 		Spec: v2alpha1.InstrumentationSpec{
 			Injector: "injector:latest",
 			Rules: []v2alpha1.Rule{
@@ -179,7 +183,7 @@ func TestSelectInstrumentation_MatchesByPodLabels(t *testing.T) {
 
 func TestMutate_AlreadyInjectedSkips(t *testing.T) {
 	cr := &v2alpha1.Instrumentation{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-cr"},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-cr", Namespace: "default"},
 		Spec: v2alpha1.InstrumentationSpec{
 			Injector: "injector:latest",
 			Rules:    []v2alpha1.Rule{{Name: "catch-all"}},
@@ -217,7 +221,7 @@ func TestMutate_AlreadyInjectedSkips(t *testing.T) {
 
 func TestMutate_RolledBackWorkload_SkipsInjection(t *testing.T) {
 	cr := &v2alpha1.Instrumentation{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-cr", Generation: 1},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-cr", Namespace: "default", Generation: 1},
 		Spec: v2alpha1.InstrumentationSpec{
 			Injector: "injector:latest",
 			Rules:    []v2alpha1.Rule{{Name: "catch-all"}},
@@ -264,7 +268,7 @@ func TestMutate_RolledBackWorkload_SkipsInjection(t *testing.T) {
 
 func TestMutate_RolledBackWorkload_NewerGeneration_Injects(t *testing.T) {
 	cr := &v2alpha1.Instrumentation{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-cr", Generation: 2}, // Newer generation
+		ObjectMeta: metav1.ObjectMeta{Name: "test-cr", Namespace: "default", Generation: 2}, // Newer generation
 		Spec: v2alpha1.InstrumentationSpec{
 			Injector: "injector:latest",
 			Rules:    []v2alpha1.Rule{{Name: "catch-all"}},
@@ -311,7 +315,7 @@ func TestMutate_RolledBackWorkload_NewerGeneration_Injects(t *testing.T) {
 
 func TestMutate_WorkloadNotInInventory_Injects(t *testing.T) {
 	cr := &v2alpha1.Instrumentation{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-cr", Generation: 1},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-cr", Namespace: "default", Generation: 1},
 		Spec: v2alpha1.InstrumentationSpec{
 			Injector: "injector:latest",
 			Rules:    []v2alpha1.Rule{{Name: "catch-all"}},

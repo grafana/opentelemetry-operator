@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: myapp
-          image: busybox:latest
+          image: debian:bookworm-slim
           command: ["sleep", "3600"]
 ---
 apiVersion: apps/v1
@@ -33,5 +33,5 @@ spec:
     spec:
       containers:
         - name: myapp
-          image: busybox:latest
+          image: debian:bookworm-slim
           command: ["sleep", "3600"]

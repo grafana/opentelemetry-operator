@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: injector-rollback
 spec:
+  concurrent: false
   # The test needs time for the crash loop + grace period (10s) + rollback detection.
   timeouts:
     assert: 120s

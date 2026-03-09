@@ -14,11 +14,11 @@ spec:
     spec:
       containers:
         - name: myapp
-          image: busybox:latest
+          image: debian:bookworm-slim
           command: ["sleep", "3600"]
         - name: sidecar
-          image: busybox:latest
+          image: debian:bookworm-slim
           command: ["sleep", "3600"]
         - name: conflict-container
-          image: busybox:latest
+          image: debian:bookworm-slim
           command: ["sleep", "3600"]

@@ -3,7 +3,7 @@ kind: Instrumentation
 metadata:
   name: injector-ns-selector
 spec:
-  injector: busybox:latest
+  injector: "{{INJECTOR_IMG}}"
   rules:
     - name: prod-only
       selector:

@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: myapp
-          image: busybox:latest
+          image: debian:bookworm-slim
           # Crash if LD_PRELOAD is set (simulates instrumentation-caused crash).
           # After rollback removes LD_PRELOAD, the container runs normally.
           command: ["sh", "-c", "if [ -n \"$LD_PRELOAD\" ]; then echo 'crash: LD_PRELOAD is set' >&2; exit 1; fi; echo 'running healthy' && sleep 3600"]

@@ -6,7 +6,7 @@ spec:
   # Use a nonexistent injector image so LD_PRELOAD causes crashes.
   # The busybox image doesn't have libotelinject.so, so the dynamic linker
   # will fail to load LD_PRELOAD and the container will crash.
-  injector: busybox:latest
+  injector: "{{INJECTOR_IMG}}"
   defaults:
     rollback:
       enabled: true

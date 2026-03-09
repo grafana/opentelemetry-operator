@@ -635,7 +635,7 @@ load-image-injector-all: container-injector-all kind
 # Replace injector image placeholders in e2e test manifests
 .PHONY: add-image-injector
 add-image-injector:
-	$(SED_INPLACE) 's|{{INJECTOR_IMG}}|$(INJECTOR_IMG)|g' tests/e2e-instrumentation/injector-*/00-install-instrumentation.yaml
+	$(SED_INPLACE) 's|{{INJECTOR_IMG}}|$(INJECTOR_IMG)|g' tests/e2e-instrumentation/injector-*/00-install-instrumentation.yaml tests/e2e-instrumentation/injector-*/01-assert.yaml
 	$(SED_INPLACE) 's|{{INJECTOR_JAVA_IMG}}|$(INJECTOR_JAVA_IMG)|g' tests/e2e-instrumentation/injector-java/00-install-instrumentation.yaml
 	$(SED_INPLACE) 's|{{INJECTOR_JAVA_IMG}}|$(INJECTOR_JAVA_IMG)|g' tests/e2e-instrumentation/injector-mode-conflict/00-install-instrumentation.yaml
 	$(SED_INPLACE) 's|{{INJECTOR_NODEJS_IMG}}|$(INJECTOR_NODEJS_IMG)|g' tests/e2e-instrumentation/injector-nodejs/00-install-instrumentation.yaml

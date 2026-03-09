@@ -9,12 +9,6 @@ spec:
       env:
         - name: NODE_PATH
           value: /usr/local/lib/node_modules
-        - name: LD_PRELOAD
-          value: /otel/autoinstrumentation/libotelinject.so
-        - name: OTEL_INJECTOR_CONFIG_FILE
-          value: /otel/injector/otelinject.conf
-        - name: OTEL_EXPORTER_OTLP_PROTOCOL
-          value: http/protobuf
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: http://deployment-collector:4318
         - name: OTEL_TRACES_EXPORTER
@@ -23,6 +17,8 @@ spec:
           value: otlp
         - name: OTEL_TRACES_SAMPLER
           value: always_on
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: http/protobuf
         - name: OTEL_NODE_IP
           valueFrom:
             fieldRef:
@@ -33,6 +29,10 @@ spec:
               fieldPath: status.podIP
         - name: NODEJS_AUTO_INSTRUMENTATION_AGENT_PATH
           value: /otel-nodejs/autoinstrumentation/register.js
+        - name: LD_PRELOAD
+          value: /otel/autoinstrumentation/libotelinject.so
+        - name: OTEL_INJECTOR_CONFIG_FILE
+          value: /otel/autoinstrumentation/injector/otelinject.conf
         - name: OTEL_INJECTOR_K8S_NAMESPACE_NAME
           valueFrom:
             fieldRef:
@@ -55,20 +55,17 @@ spec:
           value: my-nodejs
         - name: OTEL_INJECTOR_SERVICE_NAMESPACE
         - name: OTEL_INJECTOR_RESOURCE_ATTRIBUTES
+        - name: OTEL_INJECTOR_MODE
+          value: install_unless_conflict
       volumeMounts:
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
         - name: otel-injector
           mountPath: /otel
           readOnly: true
         - name: otel-injector-nodejs
           mountPath: /otel-nodejs
           readOnly: true
-  volumes:
-    - name: otel-injector
-      image:
-        reference: "{{INJECTOR_IMG}}"
-    - name: otel-injector-nodejs
-      image:
-        reference: "{{INJECTOR_NODEJS_IMG}}"
 status:
   containerStatuses:
     - name: myapp

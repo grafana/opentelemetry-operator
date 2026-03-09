@@ -3,7 +3,7 @@ kind: Instrumentation
 metadata:
   name: injector-mode
 spec:
-  injector: busybox:latest
+  injector: "{{INJECTOR_IMG}}"
   defaults:
     mode: install
   rules:

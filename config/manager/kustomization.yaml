@@ -5,4 +5,29 @@ kind: Kustomization
 images:
 - name: controller
   newName: ghcr.io/open-telemetry/opentelemetry-operator/opentelemetry-operator
-  newTag: dev
+  newTag: 0.145.0-124-g322488de
+patches:
+- patch: '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--target-allocator-image=ghcr.io/open-telemetry/opentelemetry-operator/target-allocator:v0.145.0-118-gb5954084"}]'
+  target:
+    kind: Deployment
+- patch: '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--operator-opamp-bridge-image=ghcr.io/open-telemetry/opentelemetry-operator/operator-opamp-bridge:v0.145.0-118-gb5954084"}]'
+  target:
+    kind: Deployment
+- patch: '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--target-allocator-image=ghcr.io/open-telemetry/opentelemetry-operator/target-allocator:v0.145.0-119-g7f850134"}]'
+  target:
+    kind: Deployment
+- patch: '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--operator-opamp-bridge-image=ghcr.io/open-telemetry/opentelemetry-operator/operator-opamp-bridge:v0.145.0-119-g7f850134"}]'
+  target:
+    kind: Deployment
+- patch: '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--target-allocator-image=ghcr.io/open-telemetry/opentelemetry-operator/target-allocator:v0.145.0-122-g34bcc0b4"}]'
+  target:
+    kind: Deployment
+- patch: '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--operator-opamp-bridge-image=ghcr.io/open-telemetry/opentelemetry-operator/operator-opamp-bridge:v0.145.0-122-g34bcc0b4"}]'
+  target:
+    kind: Deployment
+- patch: '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--target-allocator-image=ghcr.io/open-telemetry/opentelemetry-operator/target-allocator:v0.145.0-124-g322488de"}]'
+  target:
+    kind: Deployment
+- patch: '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--operator-opamp-bridge-image=ghcr.io/open-telemetry/opentelemetry-operator/operator-opamp-bridge:v0.145.0-124-g322488de"}]'
+  target:
+    kind: Deployment

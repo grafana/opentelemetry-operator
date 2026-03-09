@@ -415,7 +415,7 @@ func TestInjectPod_CatchAllSkipsSystemNamespaces(t *testing.T) {
 		Spec: v2alpha1.InstrumentationSpec{
 			Injector: "injector:latest",
 			Rules: []v2alpha1.Rule{
-				{Name: "catch-all"}, // empty selector = catch-all
+				{Name: "catch-all"}, // empty selector = all non-system namespaces
 			},
 		},
 	}
@@ -427,19 +427,18 @@ func TestInjectPod_CatchAllSkipsSystemNamespaces(t *testing.T) {
 		},
 	}
 
-	// kube-system should be skipped by catch-all rules
+	// System namespaces should not match
 	result := mustInjectPod(t, inst, pod, "kube-system")
 	assert.Empty(t, result.Spec.Containers[0].Env)
 	assert.Empty(t, result.Spec.Volumes)
 
-	// kube-public too
-	result = mustInjectPod(t, inst, pod, "kube-public")
-	assert.Empty(t, result.Spec.Containers[0].Env)
-	assert.Empty(t, result.Spec.Volumes)
-
-	// Normal namespace should still match
-	result = mustInjectPod(t, inst, pod, "default")
+	// Non-system namespaces should match (CR is cluster-scoped)
+	result = mustInjectPod(t, inst, pod, "other-namespace")
 	envMap := envToMap(result.Spec.Containers[0].Env)
+	assert.Equal(t, ldPreloadPath, envMap[envLDPreload])
+
+	result = mustInjectPod(t, inst, pod, "default")
+	envMap = envToMap(result.Spec.Containers[0].Env)
 	assert.Equal(t, ldPreloadPath, envMap[envLDPreload])
 }
 
@@ -676,6 +675,7 @@ func TestInjectPod_OTLPProtocolUserOverride(t *testing.T) {
 
 func TestInjectPod_RejectsOtelInjectorEnvVars(t *testing.T) {
 	inst := &v2alpha1.Instrumentation{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
 		Spec: v2alpha1.InstrumentationSpec{
 			Injector: "injector:latest",
 			Rules: []v2alpha1.Rule{

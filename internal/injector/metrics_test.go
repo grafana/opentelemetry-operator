@@ -76,7 +76,7 @@ func attrsFor(ns, name, cr, rule, status string) attribute.Set {
 
 func instWithRules(rules ...v2alpha1.Rule) *v2alpha1.Instrumentation {
 	return &v2alpha1.Instrumentation{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-inst"},
+		ObjectMeta: metav1.ObjectMeta{Name: "test-inst", Namespace: "default"},
 		Spec: v2alpha1.InstrumentationSpec{
 			Rules: rules,
 		},

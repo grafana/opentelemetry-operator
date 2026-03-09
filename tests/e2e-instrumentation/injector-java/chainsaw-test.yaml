@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: injector-java
 spec:
+  concurrent: false
   steps:
   - name: step-00
     try:

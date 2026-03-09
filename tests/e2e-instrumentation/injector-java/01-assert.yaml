@@ -7,14 +7,10 @@ spec:
   containers:
     - name: myapp
       env:
-        - name: LD_PRELOAD
-          value: /otel/autoinstrumentation/libotelinject.so
-        - name: OTEL_INJECTOR_CONFIG_FILE
-          value: /otel/injector/otelinject.conf
-        - name: OTEL_EXPORTER_OTLP_PROTOCOL
-          value: http/protobuf
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: http://deployment-collector:4318
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: http/protobuf
         - name: OTEL_TRACES_SAMPLER
           value: always_on
         - name: OTEL_LOGS_EXPORTER
@@ -29,6 +25,10 @@ spec:
               fieldPath: status.podIP
         - name: JVM_AUTO_INSTRUMENTATION_AGENT_PATH
           value: /otel-java/autoinstrumentation/javaagent.jar
+        - name: LD_PRELOAD
+          value: /otel/autoinstrumentation/libotelinject.so
+        - name: OTEL_INJECTOR_CONFIG_FILE
+          value: /otel/autoinstrumentation/injector/otelinject.conf
         - name: OTEL_INJECTOR_K8S_NAMESPACE_NAME
           valueFrom:
             fieldRef:
@@ -51,20 +51,17 @@ spec:
           value: my-java
         - name: OTEL_INJECTOR_SERVICE_NAMESPACE
         - name: OTEL_INJECTOR_RESOURCE_ATTRIBUTES
+        - name: OTEL_INJECTOR_MODE
+          value: install_unless_conflict
       volumeMounts:
+        - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+          readOnly: true
         - name: otel-injector
           mountPath: /otel
           readOnly: true
         - name: otel-injector-java
           mountPath: /otel-java
           readOnly: true
-  volumes:
-    - name: otel-injector
-      image:
-        reference: "{{INJECTOR_IMG}}"
-    - name: otel-injector-java
-      image:
-        reference: "{{INJECTOR_JAVA_IMG}}"
 status:
   containerStatuses:
     - name: myapp
