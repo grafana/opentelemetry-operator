@@ -47,15 +47,3 @@ make manifests  # regenerates CRD YAML
 ```
 
 Use [kubebuilder markers](https://book.kubebuilder.io/reference/markers) for validation on new fields.
-
-## Status
-
-### TODO
-
-- [x] **Image volumes** (Johanna) — K8s 1.31+ image volumes replace init container + emptyDir. Ported to v2alpha1 injector (`c312865e`), v1alpha1 support removed (`e46bede5`)
-- [x] **Mode conflict detection e2e test** — `tests/e2e-instrumentation/injector-mode-conflict/` verifies `install` vs `install_unless_conflict` with a foreign `-javaagent`. Runs as part of normal `make e2e-instrumentation`. `container-injector` now builds from source.
-- [ ] ~~**Selective pod bouncing**~~ — scoped out. Requires reliable language detection which needs a daemonset (major architectural addition). See [status sidecar](status-sidecar.md) for design exploration and conclusion.
-- [x] **Instrumentation status data model** (Gregor) — Add `status.instrumentedWorkloads[]` to CRD. Foundation for crash-loop recovery, pod bouncing, and internal telemetry
-- [x] **Crash-loop auto-recovery** (Gregor) — detect instrumentation-induced pod failures and avoid re-instrumenting failing pods. See [crash-loop recovery](crashloop-recovery.md)
-- [x] **N+1 pod listing in rollback controller** — `buildWorkloadInventory` and `checkCrashState` now share a per-namespace pod cache within each reconcile loop, reducing API calls from O(rules x namespaces + workloads) to O(namespaces).
-- [x] **Instrumentation status metrics** — `otel.operator.instrumented.pods` observable counter reporting per-workload pod counts broken down by status (`instrumented`, `pending_restart`, `rolled_back`, `skipped`, `unmatched`). Driven by rollback controller; zero extra API calls. See [instrumentation metrics](instrumentation-metrics.md).
